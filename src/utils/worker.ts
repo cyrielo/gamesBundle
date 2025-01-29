@@ -165,7 +165,7 @@ function scanForHtmlFiles(dirPath: string): string[] {
  * Modifies the content of an HTML file.
  * @param filePath The path to the HTML file.
  */
-function modifyHtmlFile(filePath: string, date:string) {
+function modifyHtmlFile(filePath: string, date:string, callback:Function) {
   let content = fs.readFileSync(filePath, 'utf-8').trim();
 
   if (content === '') {
@@ -194,11 +194,12 @@ function modifyHtmlFile(filePath: string, date:string) {
   // GIT_COMMITTER_DATE="${date}" GIT_AUTHOR_DATE="2024-10-09T00:00:00" git commit -m 'update page template'
   const pos = Math.floor(Math.random() * gitCommitMessages.length - 1);
   const commitMessage = gitCommitMessages[pos];
-  exec(`git add . && GIT_COMMITTER_DATE="${date}" GIT_AUTHOR_DATE="${date}" git commit -m '${commitMessage} for [${fileName}]'`, (error, stdout, stderr) => {
+  exec(`GIT_COMMITTER_DATE="${date}" GIT_AUTHOR_DATE="${date}" git add . && git commit -m '${commitMessage} for [${fileName}]'`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error running shell command for ${fileName}:`, error);
       return;
     }
+    callback();
     console.log(stdout.trim());
   });
 }
@@ -221,20 +222,33 @@ function main() {
 
   const htmlFiles = scanForHtmlFiles(directoryPath);
   let totalOperation = 0;
-  for (let i = 0; i < commitDates.length; i++) {
+  let i = 0, j = 0;
+
+  while (i < commitDates.length) {
+
     const commitDate = commitDates[i];
     const commitCount = dailyCommitsRand[i];
     let fileIndex = 0;
-    for (let j = 0; j < commitCount; j++) {
+
+    while (j < commitCount) {
       console.log('modifying file', htmlFiles[fileIndex]);
-      modifyHtmlFile(htmlFiles[fileIndex], commitDate);
-      fileIndex++;
-      if (!htmlFiles[fileIndex]) {
-        fileIndex = 0;
-      }
-      totalOperation++;
+      modifyHtmlFile(htmlFiles[fileIndex], commitDate, () => {
+        fileIndex++;
+        if (!htmlFiles[fileIndex]) {
+          fileIndex = 0;
+        }
+        totalOperation++;
+        j++;
+      });
     }
+    i++;
   }
+
+  // for (let j = 0; j < commitCount; j++) {
+  // }
+  // for (let i = 0; i < commitDates.length; i++) {
+
+  // }
 
   console.log('totalOperation', totalOperation);
 

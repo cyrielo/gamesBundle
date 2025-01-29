@@ -150,7 +150,7 @@ function scanForHtmlFiles(dirPath) {
  * Modifies the content of an HTML file.
  * @param filePath The path to the HTML file.
  */
-function modifyHtmlFile(filePath, date) {
+function modifyHtmlFile(filePath, date, callback) {
     var content = fs.readFileSync(filePath, 'utf-8').trim();
     if (content === '') {
         // If the file is empty, fill it with the HTML5 template
@@ -177,11 +177,12 @@ function modifyHtmlFile(filePath, date) {
     // GIT_COMMITTER_DATE="${date}" GIT_AUTHOR_DATE="2024-10-09T00:00:00" git commit -m 'update page template'
     var pos = Math.floor(Math.random() * gitCommitMessages.length - 1);
     var commitMessage = gitCommitMessages[pos];
-    (0, child_process_1.exec)("git add . && GIT_COMMITTER_DATE=\"".concat(date, "\" GIT_AUTHOR_DATE=\"").concat(date, "\" git commit -m '").concat(commitMessage, " for [").concat(fileName, "]'"), function (error, stdout, stderr) {
+    (0, child_process_1.exec)("GIT_COMMITTER_DATE=\"".concat(date, "\" GIT_AUTHOR_DATE=\"").concat(date, "\" git add . && git commit -m '").concat(commitMessage, " for [").concat(fileName, "]'"), function (error, stdout, stderr) {
         if (error) {
             console.error("Error running shell command for ".concat(fileName, ":"), error);
             return;
         }
+        callback();
         console.log(stdout.trim());
     });
 }
@@ -200,20 +201,31 @@ function main() {
     }
     var htmlFiles = scanForHtmlFiles(directoryPath);
     var totalOperation = 0;
-    for (var i = 0; i < commitDates.length; i++) {
+    var i = 0, j = 0;
+    var _loop_1 = function () {
         var commitDate = commitDates[i];
         var commitCount = dailyCommitsRand[i];
         var fileIndex = 0;
-        for (var j = 0; j < commitCount; j++) {
+        while (j < commitCount) {
             console.log('modifying file', htmlFiles[fileIndex]);
-            modifyHtmlFile(htmlFiles[fileIndex], commitDate);
-            fileIndex++;
-            if (!htmlFiles[fileIndex]) {
-                fileIndex = 0;
-            }
-            totalOperation++;
+            modifyHtmlFile(htmlFiles[fileIndex], commitDate, function () {
+                fileIndex++;
+                if (!htmlFiles[fileIndex]) {
+                    fileIndex = 0;
+                }
+                totalOperation++;
+                j++;
+            });
         }
+        i++;
+    };
+    while (i < commitDates.length) {
+        _loop_1();
     }
+    // for (let j = 0; j < commitCount; j++) {
+    // }
+    // for (let i = 0; i < commitDates.length; i++) {
+    // }
     console.log('totalOperation', totalOperation);
     // if (htmlFiles.length === 0) {
     //   console.log('No .html files found.');
